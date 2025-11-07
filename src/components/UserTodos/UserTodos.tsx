@@ -307,7 +307,6 @@ export const UserTodos: React.FC = () => {
             ></button>
           )}
 
-          {/* Add a todo on form submit */}
           <form onSubmit={addTodo}>
             <input
               ref={inputTodoTitleFieldRef}
@@ -324,21 +323,19 @@ export const UserTodos: React.FC = () => {
         </header>
 
         {loading && <Loader />}
-        {todos.length > 0 && (
-          <TodosList
-            todos={visibleTodos()}
-            selectedTodoId={selectedTodo?.id}
-            processingIds={processingIds}
-            onDelete={deleteUserTodo}
-            onUpdateUserTodo={updateUserTodo}
-            inputTodoTitleFieldRef={inputTodoTitleFieldRef}
-            editingTodos={todosToUpdate}
-            onBeginEditTitle={onBeginEditTitle}
-            onChangeEditTitle={onChangeEditTitle}
-            onSaveEditTitle={onSaveEditTitle}
-            onCancelEditTitle={onCancelEditTitle}
-          />
-        )}
+        <TodosList
+          todos={visibleTodos()}
+          selectedTodoId={selectedTodo?.id}
+          processingIds={processingIds}
+          onDelete={deleteUserTodo}
+          onUpdateUserTodo={updateUserTodo}
+          inputTodoTitleFieldRef={inputTodoTitleFieldRef}
+          editingTodos={todosToUpdate}
+          onBeginEditTitle={onBeginEditTitle}
+          onChangeEditTitle={onChangeEditTitle}
+          onSaveEditTitle={onSaveEditTitle}
+          onCancelEditTitle={onCancelEditTitle}
+        />
         {tempTodo && (
           <TodoItem
             todo={tempTodo}
@@ -368,8 +365,6 @@ export const UserTodos: React.FC = () => {
         )}
       </div>
 
-      {/* DON'T use conditional rendering to hide the notification */}
-      {/* Add the 'hidden' class to hide the message smoothly */}
       <div
         className={
           isErrorVisible

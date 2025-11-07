@@ -31,70 +31,71 @@ export const TodoItem = ({
   onSaveEditTitle,
   onCancelEditTitle,
   onChangeEditTitle,
-}: Props) => (
-  <div
-    data-cy="Todo"
-    className={cn('todo', {
-      completed: todo.completed,
-      selected: selectedTodoId === todo.id,
-    })}
-  >
-    <label className="todo__status-label">
-      <input
-        data-cy="TodoStatus"
-        type="checkbox"
-        className="todo__status"
-        checked={todo.completed}
-        onChange={() =>
-          onUpdateUserTodo?.({ ...todo, completed: !todo.completed })
-        }
-      />
-    </label>
+}: Props) => {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      onSaveEditTitle?.(todo.id, (editTitle ?? '').trim());
+    } else if (e.key === 'Escape') {
+      onCancelEditTitle?.();
+    }
+  }
 
-    {editingTodoId === todo.id && (
-      <input
-        data-cy="TodoTitleField"
-        ref={inputTodoTitleFieldRef}
-        className="todo__title-field"
-        placeholder="Empty todo will be deleted"
-        type="text"
-        value={editTitle ?? ''}
-        onChange={e => onChangeEditTitle?.(todo.id, e.target.value)}
-        onBlur={() => onSaveEditTitle?.(todo.id, (editTitle ?? '').trim())}
-        onKeyDown={e => {
-          if (e.key === 'Enter') {
-            onSaveEditTitle?.(todo.id, (editTitle ?? '').trim());
+  return (
+    <div
+      data-cy="Todo"
+      className={cn('todo', {
+        completed: todo.completed,
+        selected: selectedTodoId === todo.id,
+      })}
+    >
+      <label className="todo__status-label">
+        <input
+          data-cy="TodoStatus"
+          type="checkbox"
+          className="todo__status"
+          checked={todo.completed}
+          onChange={() =>
+            onUpdateUserTodo?.({ ...todo, completed: !todo.completed })
           }
+        />
+      </label>
 
-          if (e.key === 'Escape') {
-            onCancelEditTitle?.();
-          }
-        }}
-      />
-    )}
+      {editingTodoId === todo.id && (
+        <input
+          data-cy="TodoTitleField"
+          ref={inputTodoTitleFieldRef}
+          className="todo__title-field"
+          placeholder="Empty todo will be deleted"
+          type="text"
+          value={editTitle ?? ''}
+          onChange={e => onChangeEditTitle?.(todo.id, e.target.value)}
+          onBlur={() => onSaveEditTitle?.(todo.id, (editTitle ?? '').trim())}
+          onKeyDown={handleKeyDown}
+        />
+      )}
 
-    {editingTodoId !== todo.id && (
-      <span
-        data-cy="TodoTitle"
-        className="todo__title"
-        onDoubleClick={() => onBeginEditTitle?.(todo)}
-      >
-        {todo.title}
-      </span>
-    )}
+      {editingTodoId !== todo.id && (
+        <span
+          data-cy="TodoTitle"
+          className="todo__title"
+          onDoubleClick={() => onBeginEditTitle?.(todo)}
+        >
+          {todo.title}
+        </span>
+      )}
 
-    {editingTodoId !== todo.id && (
-      <button
-        data-cy="TodoDelete"
-        type="button"
-        className="todo__remove"
-        onClick={() => onDelete?.(todo.id)}
-      >
-        ×
-      </button>
-    )}
+      {editingTodoId !== todo.id && (
+        <button
+          data-cy="TodoDelete"
+          type="button"
+          className="todo__remove"
+          onClick={() => onDelete?.(todo.id)}
+        >
+          ×
+        </button>
+      )}
 
-    {/* overlay will cover the todo while it is being deleted or updated */}
-    <TodoLoader isActive={isProcessed} />
-  </div>
-);
+      <TodoLoader isActive={isProcessed} />
+    </div>
+  );
+};

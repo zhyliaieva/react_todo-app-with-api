@@ -16,6 +16,11 @@ export const TodoFooter: React.FC<TodoFooterProps> = ({
   canClearCompleted,
   onClearCompleted,
 }) => {
+  function handleFilterClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    onChangeFilter(FilterType.Completed);
+  }
+
   return (
     <footer className="todoapp__footer" data-cy="Footer">
       <span className="todo-count" data-cy="TodosCounter">
@@ -58,10 +63,7 @@ export const TodoFooter: React.FC<TodoFooterProps> = ({
             selected: filter === FilterType.Completed,
           })}
           data-cy="FilterLinkCompleted"
-          onClick={e => {
-            e.preventDefault();
-            onChangeFilter(FilterType.Completed);
-          }}
+          onClick={handleFilterClick}
         >
           Completed
         </a>
