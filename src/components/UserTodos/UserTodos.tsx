@@ -11,16 +11,17 @@ import { TodoFooter } from '../TodoFooter/TodoFooter';
 import { Loader } from '../Loader/Loader';
 import { FilterType } from '../../types/FilterType';
 import { TodoItem } from '../TodoItem/TodoItem';
+import { USER_ID } from '../../api/todos';
 
-type UserTodosProp = {
-  userId: number;
-};
+enum ErrorNotification {
+  LoadTodos = 'Unable to load todos',
+  AddTodo = 'Unable to add a todo',
+  DeleteTodo = 'Unable to delete a todo',
+  UpdateTodo = 'Unable to update a todo',
+  TitleEmpty = 'Title should not be empty',
+}
 
-export const UserTodos: React.FC<UserTodosProp> = ({
-  userId,
-}: {
-  userId: number;
-}) => {
+export const UserTodos: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,7 @@ export const UserTodos: React.FC<UserTodosProp> = ({
   const [processingIds, setProcessingIds] = useState<number[]>([]);
 
   const [todosToUpdate, setTodosToUpdate] = useState<Todo[]>([]);
+  const isCompleted = todos.length > 0 && todos.every(todo => todo.completed);
 
   function visibleTodos() {
     switch (filter) {
@@ -53,17 +55,17 @@ export const UserTodos: React.FC<UserTodosProp> = ({
     setLoading(true);
     setErrorMessage('');
     setIsErrorVisible(false);
-    getTodos(userId)
+    getTodos(USER_ID)
       .then(setTodos)
       .catch(() => {
-        setErrorMessage('Unable to load todos');
+        setErrorMessage(ErrorNotification.LoadTodos);
         setIsErrorVisible(true);
         setTimeout(() => setIsErrorVisible(false), 3000);
       })
       .finally(() => setLoading(false));
   }
 
-  useEffect(loadTodos, [userId]);
+  useEffect(loadTodos, []);
 
   useEffect(() => {
     if (inputTodoTitleFieldRef) {
@@ -84,7 +86,7 @@ export const UserTodos: React.FC<UserTodosProp> = ({
     const trimmed = title.trim();
 
     if (!trimmed) {
-      setErrorMessage('Title should not be empty');
+      setErrorMessage(ErrorNotification.TitleEmpty);
       setIsErrorVisible(true);
       setTimeout(() => setIsErrorVisible(false), 3000);
 
@@ -99,20 +101,20 @@ export const UserTodos: React.FC<UserTodosProp> = ({
 
     const newTempTodo: Todo = {
       id: 0,
-      userId,
+      userId: USER_ID,
       title: trimmed,
       completed: false,
     };
 
     setTempTodo(newTempTodo);
 
-    createTodo({ title: trimmed, userId, completed: false })
+    createTodo({ title: trimmed, userId: USER_ID, completed: false })
       .then(newTodo => {
         setTodos(prev => [...prev, newTodo]);
         setTitle('');
       })
       .catch(() => {
-        setErrorMessage('Unable to add a todo');
+        setErrorMessage(ErrorNotification.AddTodo);
         setIsErrorVisible(true);
         setTimeout(() => setIsErrorVisible(false), 3000);
       })
@@ -131,37 +133,37 @@ export const UserTodos: React.FC<UserTodosProp> = ({
 
     return deleteTodo(todoId)
       .then(() => {
-        setTodos(p_1 => p_1.filter(t => t.id !== todoId));
+        setTodos(prev => prev.filter(todo => todo.id !== todoId));
       })
       .catch(() => {
-        setErrorMessage('Unable to delete a todo');
+        setErrorMessage(ErrorNotification.DeleteTodo);
         setIsErrorVisible(true);
       })
       .finally(() => {
-        setProcessingIds(p_2 => p_2.filter(id_1 => id_1 !== todoId));
+        setProcessingIds(prev => prev.filter(id_1 => id_1 !== todoId));
       });
   }
 
   async function onClearCompleted() {
     const completed = todos.filter(t => t.completed);
-    const ids = completed.map(t => t.id);
+    const ids = completed.map(todo => todo.id);
 
     setProcessingIds(prev => [...prev, ...ids]);
 
     const promises = ids.map(id => deleteTodo(id));
     const results = await Promise.allSettled(promises);
     const succeededIds = results
-      .map((r, i) => (r.status === 'fulfilled' ? ids[i] : null))
+      .map((result, i) => (result.status === 'fulfilled' ? ids[i] : null))
       .filter(Boolean);
 
     setTodos(prev => prev.filter(t => !succeededIds.includes(t.id)));
 
     const rejectedIds = results
-      .map((r, i) => (r.status === 'rejected' ? ids[i] : null))
+      .map((result, i) => (result.status === 'rejected' ? ids[i] : null))
       .filter(Boolean);
 
     if (rejectedIds.length > 0) {
-      setErrorMessage('Unable to delete a todo');
+      setErrorMessage(ErrorNotification.DeleteTodo);
       setIsErrorVisible(true);
     }
 
@@ -170,7 +172,7 @@ export const UserTodos: React.FC<UserTodosProp> = ({
 
   async function updateUserTodo(todoToUpdate: Todo) {
     try {
-      setProcessingIds(p => [...p, todoToUpdate.id]);
+      setProcessingIds(prev => [...prev, todoToUpdate.id]);
       const updated = await updateTodo(todoToUpdate);
 
       setTodos(current =>
@@ -179,22 +181,22 @@ export const UserTodos: React.FC<UserTodosProp> = ({
 
       return updated;
     } catch (error) {
-      setErrorMessage('Unable to update a todo');
+      setErrorMessage(ErrorNotification.UpdateTodo);
       setIsErrorVisible(true);
       setTimeout(() => setIsErrorVisible(false), 3000);
 
       throw error;
     } finally {
-      setProcessingIds(p => p.filter(id => id !== todoToUpdate.id));
+      setProcessingIds(prev => prev.filter(id => id !== todoToUpdate.id));
     }
   }
 
   async function handleToggleAll() {
-    const allCompleted = todos.length > 0 && todos.every(t => t.completed);
+    const allCompleted = todos.length > 0 && isCompleted;
     const newStatus = !allCompleted;
 
-    const todosToEdit = todos.filter(t => t.completed !== newStatus);
-    const idsToUpdate = todosToEdit.map(t => t.id);
+    const todosToEdit = todos.filter(todo => todo.completed !== newStatus);
+    const idsToUpdate = todosToEdit.map(todo => todo.id);
 
     if (idsToUpdate.length === 0) {
       return;
@@ -209,21 +211,27 @@ export const UserTodos: React.FC<UserTodosProp> = ({
     const results = await Promise.allSettled(promises);
 
     const succeededIds = results
-      .map((r, i) => (r.status === 'fulfilled' ? idsToUpdate[i] : null))
+      .map((result, i) =>
+        result.status === 'fulfilled' ? idsToUpdate[i] : null,
+      )
       .filter(Boolean);
 
     setTodos(prev =>
-      prev.map(t =>
-        succeededIds.includes(t.id) ? { ...t, completed: newStatus } : t,
+      prev.map(todo =>
+        succeededIds.includes(todo.id)
+          ? { ...todo, completed: newStatus }
+          : todo,
       ),
     );
 
     const rejectedIds = results
-      .map((r, i) => (r.status === 'rejected' ? idsToUpdate[i] : null))
+      .map((result, i) =>
+        result.status === 'rejected' ? idsToUpdate[i] : null,
+      )
       .filter(Boolean);
 
     if (rejectedIds.length > 0) {
-      setErrorMessage('Unable to update a todo');
+      setErrorMessage(ErrorNotification.UpdateTodo);
       setIsErrorVisible(true);
       setTimeout(() => setIsErrorVisible(false), 3000);
     }
@@ -234,12 +242,12 @@ export const UserTodos: React.FC<UserTodosProp> = ({
 
   function onChangeEditTitle(id: number, newTitle: string) {
     setTodosToUpdate(prev =>
-      prev.map(t => (t.id === id ? { ...t, title: newTitle } : t)),
+      prev.map(todo => (todo.id === id ? { ...todo, title: newTitle } : todo)),
     );
   }
 
   function onSaveEditTitle(id: number, newTitle: string): void | Promise<Todo> {
-    const todoToUpdate = todosToUpdate.find(t => t.id === id);
+    const todoToUpdate = todosToUpdate.find(todo => todo.id === id);
     const trimmed = newTitle.trim();
 
     if (!todoToUpdate) {
@@ -251,18 +259,18 @@ export const UserTodos: React.FC<UserTodosProp> = ({
     }
 
     if (trimmed === todoToUpdate.title) {
-      setTodosToUpdate(prev => prev.filter(t => t.id !== id));
+      setTodosToUpdate(prev => prev.filter(todo => todo.id !== id));
     }
 
     return updateUserTodo({ ...todoToUpdate, title: trimmed })
       .then(updated => {
-        setTodos(prev => prev.map(t => (t.id === id ? updated : t)));
-        setTodosToUpdate(prev => prev.filter(t => t.id !== id));
+        setTodos(prev => prev.map(todo => (todo.id === id ? updated : todo)));
+        setTodosToUpdate(prev => prev.filter(todo => todo.id !== id));
 
         return updated;
       })
       .catch(() => {
-        setErrorMessage('Unable to update a todo');
+        setErrorMessage(ErrorNotification.UpdateTodo);
         setIsErrorVisible(true);
         setTimeout(() => setIsErrorVisible(false), 3000);
 
@@ -270,17 +278,28 @@ export const UserTodos: React.FC<UserTodosProp> = ({
       });
   }
 
+  function onBeginEditTitle(todo: Todo) {
+    if (todosToUpdate.find(t => t.id === todo.id)) {
+      return;
+    }
+
+    setTodosToUpdate(prev => [...prev, { ...todo }]);
+  }
+
+  function onCancelEditTitle() {
+    setTodosToUpdate([]);
+  }
+
   return (
     <>
       <div className="todoapp__content">
         <header className="todoapp__header">
-          {/* this button should have `active` class only if all todos are completed */}
           {todos.length > 0 && (
             <button
               data-cy="ToggleAllButton"
               type="button"
               className={
-                todos.every(t => t.completed)
+                isCompleted
                   ? 'todoapp__toggle-all active'
                   : 'todoapp__toggle-all'
               }
@@ -314,18 +333,10 @@ export const UserTodos: React.FC<UserTodosProp> = ({
             onUpdateUserTodo={updateUserTodo}
             inputTodoTitleFieldRef={inputTodoTitleFieldRef}
             editingTodos={todosToUpdate}
-            onBeginEditTitle={todo => {
-              if (todosToUpdate.find(t => t.id === todo.id)) {
-                return;
-              }
-
-              setTodosToUpdate(prev => [...prev, { ...todo }]);
-            }}
+            onBeginEditTitle={onBeginEditTitle}
             onChangeEditTitle={onChangeEditTitle}
             onSaveEditTitle={onSaveEditTitle}
-            onCancelEditTitle={() => {
-              setTodosToUpdate([]);
-            }}
+            onCancelEditTitle={onCancelEditTitle}
           />
         )}
         {tempTodo && (
@@ -340,18 +351,10 @@ export const UserTodos: React.FC<UserTodosProp> = ({
             editTitle={
               todosToUpdate.find(t => t.id === tempTodo.id)?.title ?? ''
             }
-            onBeginEditTitle={todo => {
-              if (todosToUpdate.find(t => t.id === todo.id)) {
-                return;
-              }
-
-              setTodosToUpdate(prev => [...prev, { ...todo }]);
-            }}
+            onBeginEditTitle={onBeginEditTitle}
             onChangeEditTitle={onChangeEditTitle}
             onSaveEditTitle={onSaveEditTitle}
-            onCancelEditTitle={() => {
-              setTodosToUpdate([]);
-            }}
+            onCancelEditTitle={onCancelEditTitle}
           />
         )}
         {todos.length > 0 && (

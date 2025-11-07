@@ -5,16 +5,14 @@ import { USER_ID } from './api/todos';
 import { UserTodos } from './components/UserTodos/UserTodos';
 
 export const App: React.FC = () => {
-  const userId = USER_ID;
-
-  if (!userId) {
+  if (!USER_ID) {
     return <UserWarning />;
   }
 
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
-      <UserTodos userId={Number(userId)} />
+      <UserTodos />
     </div>
   );
 };
